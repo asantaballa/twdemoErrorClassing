@@ -11,12 +11,15 @@ Go
 
 CReate Table  ErrorMatchPatterns 
 ( Id			Int		Identity 
+, Level			Int
 , Pattern		Varchar(128)
 )
 
-Insert Into ErrorMatchPatterns (Pattern)
+Insert Into ErrorMatchPatterns (Level, Pattern)
 Values
-  ('No setup for period %')
-, ('Security violation detected user %, access %')
+  (2, 'No setup for period %')
+, (2, 'Security violation detected user %, access %')
+, (1, 'Attemp to save failed, reason 16%')
+, (2, 'Attemp to save failed, reason %')
 
 Select * From ErrorMatchPatterns

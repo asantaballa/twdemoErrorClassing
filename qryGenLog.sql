@@ -6,10 +6,10 @@ Go
 
 If OBJECT_ID(N'ErrorLog', N'U') Is Not Null
   Drop Table ErrorLog
+Go
 
-If OBJECT_ID(N'ErrorLogGenPatterns', N'U') Is Not Null
-  Drop Table ErrorLogGenPatterns
-
+If OBJECT_ID(N'tempdb..#ErrorLogGenPatterns', N'U') Is Not Null
+  Drop Table #ErrorLogGenPatterns
 Go
 
 Create Table ErrorLog
@@ -21,7 +21,7 @@ Create Table ErrorLog
 --, SelectedId	Int
 )
 
-CReate Table  ErrorLogGenPatterns 
+Create Table  #ErrorLogGenPatterns 
 ( Id			Int		Identity 
 , Pattern		Varchar(128)
 , NumDesired	Int
@@ -30,7 +30,7 @@ CReate Table  ErrorLogGenPatterns
 , RandHigh		Float
 )
 
-Insert Into ErrorLogGenPatterns
+Insert Into #ErrorLogGenPatterns
 ( Pattern
 , NumDesired
 )
@@ -39,29 +39,31 @@ Values
 , ( 'Error {n} returned from communicating with outside service', 20)
 , ( 'No setup for period {d}', 12)
 , ( 'Unable to communicate with device {n2}, error {n}', 25)
-, ( 'Security violation detected user {n}, access {n2}', 10)
+, ( 'Security violation detected user {n}, access {n2}', 100)
+, ( 'Attemp to save failed, reason 12', 10)
+, ( 'Attemp to save failed, reason 16', 10)
 
-Update ErrorLogGenPatterns
+Update #ErrorLogGenPatterns
 Set 
-  Percentage = Cast(NumDesired As Float) / (Select Sum(NumDesired) From ErrorLogGenPatterns ptot)
+  Percentage = Cast(NumDesired As Float) / (Select Sum(NumDesired) From #ErrorLogGenPatterns ptot)
 
-Update ErrorLogGenPatterns
+Update #ErrorLogGenPatterns
 Set 
-  RandLow = IsNull((Select Sum(Percentage) From ErrorLogGenPatterns p Where p.Id < ErrorLogGenPatterns.Id), 0) 
-, RandHigh = IsNull((Select Sum(Percentage) From ErrorLogGenPatterns p Where p.Id < ErrorLogGenPatterns.Id), 0) + ErrorLogGenPatterns.Percentage
+  RandLow = IsNull((Select Sum(Percentage) From #ErrorLogGenPatterns p Where p.Id < #ErrorLogGenPatterns.Id), 0) 
+, RandHigh = IsNull((Select Sum(Percentage) From #ErrorLogGenPatterns p Where p.Id < #ErrorLogGenPatterns.Id), 0) + #ErrorLogGenPatterns.Percentage
 
 --Select * From ErrorLogGenPatterns
 
 Declare @CntGenned Int = 0
 Declare @RandVal Float
 
-While @CntGenned <= (Select Sum(NumDesired) from ErrorLogGenPatterns)
+While @CntGenned <= (Select Sum(NumDesired) from #ErrorLogGenPatterns)
 Begin
 	Set @RandVal = Rand()
 
-	Declare @SelectedId Int = (Select Top 1 Id From ErrorLogGenPatterns p Where @RandVal Between p.RandLow and p.RandHigh Order by Id)
+	Declare @SelectedId Int = (Select Top 1 Id From #ErrorLogGenPatterns p Where @RandVal Between p.RandLow and p.RandHigh Order by Id)
 
-	Declare @Pattern Varchar(128) = (Select p.Pattern From ErrorLogGenPatterns p Where p.Id = @SelectedId)
+	Declare @Pattern Varchar(128) = (Select p.Pattern From #ErrorLogGenPatterns p Where p.Id = @SelectedId)
 	Set @Pattern = Replace(@Pattern, '{n}', Cast(Round(Rand() * 100, 0) As Varchar(16)))  
 	Set @Pattern = Replace(@Pattern, '{n2}', Cast(Round(Rand() * 100, 0) As Varchar(16)))  
 	Set @Pattern = Replace(@Pattern, '{d}', Cast(GetDate() As Varchar(32)))  
